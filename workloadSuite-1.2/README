@@ -1,0 +1,287 @@
+
+Hadoop MapReduce Workload Suite README
+
+Yanpei Chen, Archana Ganapathi, Rean Griffith, Randy Katz
+RAD Lab, EECS Dept., UC Berkeley
+{ychen2, archanag, rean, randy}@eecs.berkeley.edu
+
+
+
+Initial release March 2011. 
+
+Appreciate comments on documentation completeness and
+usefulness of the workloads. Love to hear what problems
+you are solving with these workloads. 
+
+-----------
+
+Purpose of this file
+
+  Instructions with regard to how to setup and run this Hadoop MapReduce workload suite.
+
+List of files in this workload suite distribution
+
+  GenerateReplayScript.java
+  HDFSWrite.java
+  randomwriter_conf.xsl
+  README
+  samples_24_times_1hr_0_first50jobs.tsv
+  samples_24_times_1hr_0.tsv
+  samples_24_times_1hr_1.tsv
+  scriptsTest/run-jobs-all.sh
+  scriptsTest/run-jobs-$i.sh, $i in {0..49} 
+  WorkGen.java
+  workGenKeyValue_conf.xsl
+  WorkloadSynthesis.pl
+
+-----------
+
+1. Synethsizes workloads by sampling a Hadoop trace 
+
+  WorkloadSynthesis.pl
+
+  Usage:
+ 
+  perl WorkloadSynthesis.pl
+       --inPath=STRING 
+       --outPrefix=STRING
+       --repeats=INT
+       --samples=INT
+       --length=INT
+       --traceStart=INT
+       --traceEnd=INT
+
+  The script samples the Hadoop trace in "inPath", and
+  generates several synthetic workloads stored with file
+  names prefixed by "outPrefix".
+
+  inPath: Path to file of the full trace
+
+    Expected format: Tab separated fields, one record per row per job, 
+    each row contains fields in the following order:
+
+    unique_job_id
+    job_name
+    map_input_bytes
+    shuffle_bytes
+    reduce_output_bytes
+    submit_time_seconds (epoch format)
+    duration_seconds
+    map_time_task_seconds (2 tasks of 10 seconds = 20 task-seconds)
+    red_time_task_seconds
+    total_time_task_seconds
+
+  outPrefix: Prefix of synthetic workloads output files
+
+    Output format: Tab separated fields, one record per row per job,
+    each row contains fields in the following order:
+
+    new_unique_job_id
+    submit_time_seconds (relative to the start of the workload)
+    inter_job_submit_gap_seconds
+    map_input_bytes
+    shuffle_bytes
+    reduce_output_bytes
+
+  repeats: The number of synthetic workloads to create
+
+  samples: The number of samples in each synthetic workload
+
+  length: The time length of each sample window in seconds
+
+  traceStart: Start time of the trace (epoch format)
+
+  traceEnd: End time of the trace (epoch format)  
+
+  E.g., samples_24_times_1hr_0.tsv and samples_24_times_1hr_0.tsv were
+  created by running
+
+  perl WorkloadSynthesis.pl
+       --inPath=FacebookTrace
+       --outPrefix=samples_24_times_1hr_
+       --repeats=2
+       --samples=24
+       --length=3600
+       --traceStart=FacebookTraceStart
+       --traceEnd=FacebookTraceEnd
+
+
+
+-----------
+
+1.1. Pre-synthesized Facebook-like workload
+
+  samples_24_times_1hr_0.tsv
+  samples_24_times_1hr_1.tsv
+  samples_24_times_1hr_0_first50jobs.tsv (for testing)
+
+  Synthesized from Facebook production cluster trace. 
+  One day long, 24 samples of 1 hour. 
+  Original trace comes from a 600-machine Hadoop cluster,
+  spans 6 months from May 2009 to October 2009,
+  and contains roughly 1 million jobs.
+
+  File format: Tab separated fields, one record per row per job,
+  each row contains fields in the following order:
+
+    new_unique_job_id
+    submit_time_seconds (relative to the start of the workload)
+    inter_job_submit_gap_seconds
+    map_input_bytes
+    shuffle_bytes
+    reduce_output_bytes
+
+  This is the same format as the output of WorkloadSynthesis.pl
+
+
+
+-----------
+
+2. Generate scripts to execute the synthetic workload
+
+  GenerateReplayScript.java
+
+  Usage: 
+
+  javac GenerateReplayScript.java
+
+  java GenerateReplayScript
+       [path to synthetic workload file]
+       [number of machines in the original production cluster]
+       [number of machines in the cluster where the workload will be run]
+       [size of each input partition in bytes]
+       [number of input partitions]
+       [output directory for the scripts]
+       [HDFS directory for the input data]
+       [amount of data per reduce task in byptes]
+
+  Generates a folder of shell scripts to execute the synthetic workload. 
+
+  Make sure to "chmod +x" the shell scripts generated. 
+
+  [path to synthetic workload file]
+
+     e.g., samples_24_times_1hr_0.tsv, or, for testing, 
+           samples_24_times_1hr_0_first50jobs.tsv 
+
+  [number of machines in the original production cluster]
+
+     e.g., 600 for the Facebook trace
+
+  [number of machines in the cluster where the workload will be run]
+
+     e.g., 10 machines, small test cluster
+
+  [size of each input partition in bytes]
+
+     Should be roughly the same as HDFS block size, e.g., 67108864
+
+  [number of input partitions]
+
+     The input data size need to be >= max input size in the synthetic workload. 
+     Try a number. The program will check whether it is large enough.   
+     e.g., 10 for the workload in samples_24_times_1hr_0_first50jobs.tsv. 
+
+  [output directory for the scripts]
+
+     e.g., scriptsTest, or, to not overwrite the files in that directory, scriptsTest2
+
+  [HDFS directory for the input data]
+
+     e.g., workGenInput
+
+  [amount of data per reduce task in byptes]
+
+     Should be roughly the same as HDFS block size, e.g., 67108864
+
+  E.g. The scripts in scriptsTest/ were created by 
+ 
+  java GenerateReplayScript 
+       samples_24_times_1hr_0_first50jobs.tsv 
+       600 
+       10 
+       67108864 
+       10 
+       scriptTest 
+       workGenInput 
+       67108864
+  
+
+-----------
+
+2.1. Pre-synthesized scripts for the Facebook-like workload
+
+  Located in scriptsTest/
+
+  Contains first 50 jobs in the day-long Facebook-like workload
+
+  The primary script is run-jobs-all.sh
+  That in turns calls run-jobs-$i.sh at appropriate times. 
+
+
+-----------
+
+3. Prepare Hadoop cluster
+
+  Install Hadoop and setup a cluster. 
+
+  Copy randomwriter_conf.xsl and workGenKeyValue_conf.xsl
+  to the ${HADOOP_HOME}/conf/ folder. 
+
+  
+
+-----------
+
+4. Compile MapReduce jobs needed for workload execution
+
+  Compile the MapReduce job used to write the input data set
+
+    mkdir hdfsWrite
+    javac -classpath ${HADOOP_HOME}/hadoop-${HADOOP_VERSION}-core.jar -d hdfsWrite HDFSWrite.java
+    jar -cvf HDFSWrite.jar -C hdfsWrite/ .
+
+  Compile the MapReduce job used to read/shuffle/write data with prescribed data ratios
+
+    mkdir workGen
+    javac -classpath ${HADOOP_HOME}/hadoop-${HADOOP_VERSION}-core.jar -d workGen WorkGen.java
+    jar -cvf WorkGen.jar -C workGen/ .
+
+
+
+-----------
+
+5. Execute workload
+
+  Start a Hadoop cluster, with the same number of machines as that 
+  used to generate the scripts earlier in Step 2.
+
+  Write input data: 
+
+    bin/hadoop jar HDFSWrite.jar org.apache.hadoop.examples.HDFSWrite -conf conf/randomwriter_conf.xsl workGenInput  
+
+  Run the actual workload: 
+
+    cd ${HADOOP_HOME}/scriptsTest
+    ./run-jobs-all.sh &
+
+  The workload will then run in the background until complete. 
+
+
+
+-----------
+
+6. Workload output and post processing
+
+  run-job-$i.sh pipes System.out and System.err to ${HADOOP_HOME}/output/job-$i.txt
+
+  The files contain the screen output generated by Hadoop during each job's execution. 
+
+  A quick way to extract the duration of each job: 
+
+  for i in {0..$END}
+  do
+    cat ${HADOOP_HOME}/output/job-$i.txt | grep "The job took" | awk '{print $4}' >> all-jobs-duration.txt
+  done
+
+  The per-job duration data is now ready for further performance analysis.
+
