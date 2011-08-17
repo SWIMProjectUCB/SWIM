@@ -1,3 +1,3 @@
-../bin/hadoop jar ../WorkGen.jar org.apache.hadoop.examples.WorkGen -conf ../conf/workGenKeyValue_conf.xsl -r 1 workGenInput/part-00001 workGenOut-job2 1.47596E-4 0.39293286 >> ../output/job-2.txt 2>> ../output/job-2.txt 
-../bin/hadoop dfs -rmr workGenOut-job2
+hadoop jar WorkGen.jar org.apache.hadoop.examples.WorkGen -conf /usr/lib/hadoop-0.20.2/conf/workGenKeyValue_conf.xsl -r 1 inputPath-job-2.txt workGenOutputTest-2 1.47596E-4 0.39293286 >> workGenLogs/job-2.txt 2>> workGenLogs/job-2.txt 
+hadoop dfs -rmr workGenOutputTest-2
 # inputSize 67108864

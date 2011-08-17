@@ -1,6 +1,6 @@
 #!/bin/bash
-rm -r ../output
-mkdir ../output
+rm -r workGenLogs
+mkdir workGenLogs
 ./run-job-0.sh &
 sleep 49
 ./run-job-1.sh &

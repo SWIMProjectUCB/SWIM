@@ -32,6 +32,9 @@ import org.apache.hadoop.mapred.lib.IdentityMapper;
 import org.apache.hadoop.mapred.lib.IdentityReducer;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
+import java.io.BufferedReader;
+import java.io.FileReader;
+
 
 /**
  * Comments here
@@ -52,7 +55,7 @@ public class WorkGen extends Configured implements Tool {
     /**
      * User counters
      */
-    static enum Counters { MAP_RECORDS_WRITTEN, MAP_BYTES_WRITTEN, RED_RECORDS_WRITTEN, RED_BYTES_WRITTEN }
+    static enum Counters { MAP_RECORDS_WRITTEN, MAP_BYTES_WRITTEN, RED_RECORDS_WRITTEN, RED_BYTES_WRITTEN };
 
 
 
@@ -61,7 +64,7 @@ public class WorkGen extends Configured implements Tool {
      */
     static class RatioMapper extends MapReduceBase implements Mapper<WritableComparable, Writable, BytesWritable, BytesWritable> {
 	
-	private float shuffleInputRatio = 1.0f;
+	private double shuffleInputRatio = 1.0d;
 
 	private int minKeySize;
 	private int keySizeRange;
@@ -80,10 +83,10 @@ public class WorkGen extends Configured implements Tool {
 	/** Input key/val pair is swallowed up, no action is taken */
 	public void map(WritableComparable key, Writable val, OutputCollector<BytesWritable, BytesWritable> output, Reporter reporter) throws IOException {
 
-	    float shuffleInputRatioTemp = shuffleInputRatio;
+	    double shuffleInputRatioTemp = shuffleInputRatio;
 	    
 	    // output floor(shuffleInputRatio) number of intermediate pairs
-	    while (shuffleInputRatioTemp >= 0.0f) {
+	    while (shuffleInputRatioTemp >= 0.0d) {
 		int keyLength = minKeySize + (keySizeRange != 0 ? random.nextInt(keySizeRange) : 0);
 		randomKey = new BytesWritable();
 		randomKey.setSize(keyLength);
@@ -92,19 +95,19 @@ public class WorkGen extends Configured implements Tool {
 		randomValue = new BytesWritable();
 		randomValue.setSize(valueLength);
 		randomizeBytes(randomValue.get(), 0, randomValue.getSize());
-		if (shuffleInputRatioTemp >= 1.0f || (random.nextFloat() < shuffleInputRatioTemp)) {
+		if (shuffleInputRatioTemp >= 1.0d || (random.nextFloat() < shuffleInputRatioTemp)) {
 		    output.collect(randomKey, randomValue);
 		    reporter.incrCounter(Counters.MAP_BYTES_WRITTEN, keyLength + valueLength);
 		    reporter.incrCounter(Counters.MAP_RECORDS_WRITTEN, 1);
 		}
-		shuffleInputRatioTemp -= 1.0f;
+		shuffleInputRatioTemp -= 1.0d;
 	    } // end while
 
 	} // end map()
 
 	@Override
 	public void configure(JobConf job) {
-	    shuffleInputRatio = Float.parseFloat(job.getRaw("workGen.ratios.shuffleInputRatio"));
+	    shuffleInputRatio = Double.parseDouble(job.getRaw("workGen.ratios.shuffleInputRatio"));
 	    minKeySize        = job.getInt("workGen.randomwrite.min_key", 10);
 	    keySizeRange      = job.getInt("workGen.randomwrite.max_key", 1000) - minKeySize;
 	    minValueSize      = job.getInt("workGen.randomwrite.min_value", 0);
@@ -118,7 +121,7 @@ public class WorkGen extends Configured implements Tool {
      */
     static class RatioReducer extends MapReduceBase implements Reducer<WritableComparable, Writable, BytesWritable, BytesWritable> {
 
-        private float outputShuffleRatio = 1.0f;
+        private double outputShuffleRatio = 1.0d;
 
         private int minKeySize;
         private int keySizeRange;
@@ -142,10 +145,10 @@ public class WorkGen extends Configured implements Tool {
 	    while (values.hasNext()) {
 		Writable value = values.next();
 
-		float outputShuffleRatioTemp = outputShuffleRatio;
+		double outputShuffleRatioTemp = outputShuffleRatio;
 
 		// output floor(outputShuffleRatio) number of intermediate pairs
-		while (outputShuffleRatioTemp >= 0.0f) {
+		while (outputShuffleRatioTemp >= 0.0d) {
 		    int keyLength = minKeySize + (keySizeRange != 0 ? random.nextInt(keySizeRange) : 0);
 		    randomKey = new BytesWritable();
 		    randomKey.setSize(keyLength);
@@ -154,19 +157,19 @@ public class WorkGen extends Configured implements Tool {
 		    randomValue = new BytesWritable();
 		    randomValue.setSize(valueLength);
 		    randomizeBytes(randomValue.get(), 0, randomValue.getSize());
-		    if (outputShuffleRatioTemp >= 1.0f || (random.nextFloat() < outputShuffleRatioTemp)) {
+		    if (outputShuffleRatioTemp >= 1.0d || (random.nextFloat() < outputShuffleRatioTemp)) {
 			output.collect(randomKey, randomValue);
 			reporter.incrCounter(Counters.RED_BYTES_WRITTEN, keyLength + valueLength);
 			reporter.incrCounter(Counters.RED_RECORDS_WRITTEN, 1);
 		    }
-		    outputShuffleRatioTemp -= 1.0f;		    
+		    outputShuffleRatioTemp -= 1.0d;		    
 		} // end while
 	    }
 	}
 
         @Override
 	    public void configure(JobConf job) {
-            outputShuffleRatio = Float.parseFloat(job.getRaw("workGen.ratios.outputShuffleRatio"));
+            outputShuffleRatio = Double.parseDouble(job.getRaw("workGen.ratios.outputShuffleRatio"));
             minKeySize        = job.getInt("workGen.randomwrite.min_key", 10);
             keySizeRange      = job.getInt("workGen.randomwrite.max_key", 10) - minKeySize;
             minValueSize      = job.getInt("workGen.randomwrite.min_value", 90);
@@ -239,7 +242,6 @@ public class WorkGen extends Configured implements Tool {
 
     // Set user-supplied (possibly default) job configs
     jobConf.setNumReduceTasks(num_reduces);
-    //jobConf.setNumMapTasks(num_maps);
 
     jobConf.setInputFormat(inputFormatClass);
     jobConf.setOutputFormat(outputFormatClass);
@@ -253,7 +255,9 @@ public class WorkGen extends Configured implements Tool {
           otherArgs.size() + " instead of 4.");
       return printUsage();
     }
-    FileInputFormat.setInputPaths(jobConf, otherArgs.get(0));
+    BufferedReader input = new BufferedReader(new FileReader(otherArgs.get(0)));
+    String inputPaths = input.readLine();
+    FileInputFormat.setInputPaths(jobConf, inputPaths);
     FileOutputFormat.setOutputPath(jobConf, new Path(otherArgs.get(1)));
     jobConf.set("workGen.ratios.shuffleInputRatio", otherArgs.get(2));
     jobConf.set("workGen.ratios.outputShuffleRatio", otherArgs.get(3));

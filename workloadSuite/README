@@ -153,7 +153,12 @@ List of files in this workload suite distribution
        [number of input partitions]
        [output directory for the scripts]
        [HDFS directory for the input data]
+       [prefix to workload output in HDFS]
        [amount of data per reduce task in byptes]
+       [workload stdout stderr output dir]
+       [hadoop command]
+       [path to WorkGen.jar]
+       [path to workGenKeyValue_conf.xsl]
 
   Generates a folder of shell scripts to execute the synthetic workload. 
 
@@ -188,24 +193,49 @@ List of files in this workload suite distribution
 
   [HDFS directory for the input data]
 
-     e.g., workGenInput
+     e.g., workGenInput. Later, need to generate data to this directory.
+
+  [prefix to workload output in HDFS]
+
+     e.g., workGenOutputTest. The HDFS output dir will have format $prefix-$jobIndex.
 
   [amount of data per reduce task in byptes]
 
      Should be roughly the same as HDFS block size, e.g., 67108864
 
+  [workload output dir]
+
+     Directory to output the log files, e.g., /home/USER/swimOutput
+
+  [hadoop command]
+
+     Command to invoke Hadoop on the targeted system, e.g. $HADOOP_HOME/bin/hadoop
+
+  [path to WorkGen.jar]
+
+     Path to WorkGen.jar on the targeted system, e.g. $HADOOP_HOME/WorkGen.jar
+
+  [path to workGenKeyValue_conf.xsl]
+
+     Path to workGenKeyValue_conf.xsl on the targeted system, e.g. $HADOOP_HOME/conf/workGenKeyValue_conf.xsl
+
   E.g. The scripts in scriptsTest/ were created by 
  
   java GenerateReplayScript 
-       samples_24_times_1hr_0_first50jobs.tsv 
-       600 
-       10 
-       67108864 
-       10 
-       scriptTest 
-       workGenInput 
-       67108864
-  
+    samples_24_times_1hr_0_first50jobs.tsv 
+    600 
+    10
+    67108864
+    10
+    scriptsTest
+    workGenInput
+    workGenOutputTest
+    67108864
+    workGenLogs
+    hadoop
+    WorkGen.jar
+    '/usr/lib/hadoop-0.20.2/conf/workGenKeyValue_conf.xsl'
+         
 
 -----------
 

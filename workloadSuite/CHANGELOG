@@ -1,0 +1,23 @@
+
+2011-08-16
+
+WorkGen.java
+  Changed floats to doubles. 
+
+GenerateReplayScript.java
+  Added parameters for 
+       [prefix to workload output in HDFS]
+       [workload stdout stderr output dir]
+       [hadoop command]
+       [path to WorkGen.jar]
+       [path to workGenKeyValue_conf.xsl]
+
+scriptsTest/*
+  Re-generated using the latest GenerateReplayScript.java.
+
+README
+  Changed to reflect the above.
+
+CHANGELOG
+  Added this file. 
+
