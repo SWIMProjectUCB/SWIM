@@ -95,7 +95,7 @@ public class WorkGen extends Configured implements Tool {
 		randomValue = new BytesWritable();
 		randomValue.setSize(valueLength);
 		randomizeBytes(randomValue.get(), 0, randomValue.getSize());
-		if (shuffleInputRatioTemp >= 1.0d || (random.nextFloat() < shuffleInputRatioTemp)) {
+		if (shuffleInputRatioTemp >= 1.0d || (random.nextDouble() < shuffleInputRatioTemp)) {
 		    output.collect(randomKey, randomValue);
 		    reporter.incrCounter(Counters.MAP_BYTES_WRITTEN, keyLength + valueLength);
 		    reporter.incrCounter(Counters.MAP_RECORDS_WRITTEN, 1);
@@ -157,7 +157,7 @@ public class WorkGen extends Configured implements Tool {
 		    randomValue = new BytesWritable();
 		    randomValue.setSize(valueLength);
 		    randomizeBytes(randomValue.get(), 0, randomValue.getSize());
-		    if (outputShuffleRatioTemp >= 1.0d || (random.nextFloat() < outputShuffleRatioTemp)) {
+		    if (outputShuffleRatioTemp >= 1.0d || (random.nextDouble() < outputShuffleRatioTemp)) {
 			output.collect(randomKey, randomValue);
 			reporter.incrCounter(Counters.RED_BYTES_WRITTEN, keyLength + valueLength);
 			reporter.incrCounter(Counters.RED_RECORDS_WRITTEN, 1);
@@ -264,8 +264,8 @@ public class WorkGen extends Configured implements Tool {
 
     System.out.println("Max number of map tasks " + cluster.getMaxMapTasks());
     System.out.println("Max number of red tasks " + cluster.getMaxReduceTasks());
-    System.out.println("shuffleInputRatio  = " + jobConf.getFloat("workGen.ratios.shuffleInputRatio", 1.0f));
-    System.out.println("outputShuffleRatio = " + jobConf.getFloat("workGen.ratios.outputShuffleRatio", 1.0f));
+    System.out.println("shuffleInputRatio  = " + jobConf.getDouble("workGen.ratios.shuffleInputRatio", 1.0d));
+    System.out.println("outputShuffleRatio = " + jobConf.getDouble("workGen.ratios.outputShuffleRatio", 1.0d));
 
     System.out.println("Running on " +
         cluster.getTaskTrackers() + " nodes with " + 
@@ -273,8 +273,8 @@ public class WorkGen extends Configured implements Tool {
         num_reduces + " reduces.");
     Date startTime = new Date();
     Random random = new Random();
-    System.out.println(random.nextFloat());
-    System.out.println(random.nextFloat());
+    System.out.println(random.nextDouble());
+    System.out.println(random.nextDouble());
     System.out.println("Job started: " + startTime);
     JobClient.runJob(jobConf);
     Date end_time = new Date();
