@@ -1,5 +1,26 @@
+2012-01-27
+
+Update to Version 1.4. 
+
+FB-2010_samples_24_times_1hr_0.tsv
+  Added Facebook 2010 workload. 
+
+parse-hadoop-jobhistory.pl
+  Added Hadoop job history log parsing tools. 
+
+Fully migrated repository and documentation to git hub. 
+Improved documentation, consolidated git hub wiki as sole 
+documentation source. 
+  See https://github.com/SWIMProjectUCB/SWIM/wiki. 
+
+README
+  Changed to reflect the above. 
+
+----
 
 2011-08-16
+
+Update to Version 1.3.
 
 WorkGen.java
   Changed floats to doubles. 
