@@ -1,0 +1,10 @@
+job0	9	9	1762	0	14347	inputPath1	outputPath1
+job1	18	9	970	609	697	inputPath2	outputPath2
+job2	20	2	53088744165	1510005522	5759777	inputPath3	outputPath3
+job3	22	2	61873748853	1387369304	5840114	inputPath4	outputPath4
+job4	25	3	404	22	191	inputPath5	outputPath5
+job5	32	7	1483413	0	17296097682	inputPath6	outputPath6
+job6	32	0	404	22	191	inputPath7	outputPath7
+job7	46	14	25526958	300	24106570	inputPath8	outputPath8
+job8	49	3	6913085573	1380194628	2464	inputPath9	outputPath9
+job9	56	7	123701	0	1480875	inputPath10	outputPath10
