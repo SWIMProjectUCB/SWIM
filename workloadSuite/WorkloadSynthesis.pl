@@ -34,18 +34,26 @@ while (<INPUT_FILE>) {
 
     chomp;
     my $line = $_;
-    my @fields = split(/\t/, $line);
+    my @fields = split(/[ \t]+/, $line);
 
     $all_data[$dataSize][0] = $fields[0];   # unique_job_id
     $all_data[$dataSize][1] = $fields[1];   # job_name
     $all_data[$dataSize][2] = $fields[2];   # map_input_bytes
     $all_data[$dataSize][3] = $fields[3];   # shuffle_bytes
     $all_data[$dataSize][4] = $fields[4];   # reduce_output_bytes
-    $all_data[$dataSize][5] = str2time($fields[5]);   # submit_time_seconds
-    $all_data[$dataSize][6] = (str2time($fields[7]) - str2time($fields[6]));   # duration_seconds
-    $all_data[$dataSize][7] = $fields[8];   # map_time_task_seconds
-    $all_data[$dataSize][8] = $fields[9];   # red_time_task_seconds
-    $all_data[$dataSize][9] = $fields[10];  # total_time_task_seconds
+    $all_data[$dataSize][5] = $fields[5];   # submit_time_seconds
+    $all_data[$dataSize][6] = $fields[6];   # duration_seconds
+    $all_data[$dataSize][7] = $fields[7];   # map_time_task_seconds
+    $all_data[$dataSize][8] = $fields[8];   # red_time_task_seconds
+    $all_data[$dataSize][9] = $fields[9];   # total_time_task_seconds
+    $all_data[$dataSize][10] = $fields[12]; # input path
+    $all_data[$dataSize][11] = $fields[13]; # output path
+
+    #$all_data[$dataSize][5] = str2time($fields[5]);   # submit_time_seconds
+    #$all_data[$dataSize][6] = (str2time($fields[7]) - str2time($fields[6]));   # duration_seconds
+    #$all_data[$dataSize][7] = $fields[8];   # map_time_task_seconds
+    #$all_data[$dataSize][8] = $fields[9];   # red_time_task_seconds
+    #$all_data[$dataSize][9] = $fields[10];  # total_time_task_seconds
 
     $dataSize++;
 
@@ -117,7 +125,14 @@ sub sample_and_print {
 		    print OUTPUT_FILE ($all_data[$k][5] - floor($prev)) . "\t"; # inter-job time gap seconds
 		    print OUTPUT_FILE $all_data[$k][2] . "\t";
 		    print OUTPUT_FILE $all_data[$k][3] . "\t";
-		    print OUTPUT_FILE $all_data[$k][4] . "\n";
+		    print OUTPUT_FILE $all_data[$k][4] . "\t";
+		    if (defined($all_data[$k][10])) {
+                print OUTPUT_FILE $all_data[$k][10] . "\t";
+            }
+            if (defined($all_data[$k][11])) {
+                print OUTPUT_FILE $all_data[$k][11] . "\t";
+            }
+            print OUTPUT_FILE "\n";
 
 		    $prev = $all_data[$k][5];
 		    $remainder = $endTime - $all_data[$k][5];
