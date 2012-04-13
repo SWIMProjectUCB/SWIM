@@ -87,8 +87,13 @@ sub expand_and_print {
 		    print OUTPUT_FILE $seed_data[$j][9] . "\t";
 		    print OUTPUT_FILE $seed_data[$j][10] . "\t";
 		    print OUTPUT_FILE $seed_data[$j][11] . "\t";
-		    print OUTPUT_FILE $seed_data[$j][12] . "\t";
-		    print OUTPUT_FILE $seed_data[$j][13] . "\n";
+		    if (defined($seed_data[$j][12])) {
+                print OUTPUT_FILE $seed_data[$j][12] . "\t";
+            }
+            if (defined($seed_data[$j][13])) {
+                print OUTPUT_FILE $seed_data[$j][13] . "\t";
+            }
+            print OUTPUT_FILE "\n";
 
 		    $jobNumber++;
 	    }

@@ -126,8 +126,13 @@ sub sample_and_print {
 		    print OUTPUT_FILE $all_data[$k][2] . "\t";
 		    print OUTPUT_FILE $all_data[$k][3] . "\t";
 		    print OUTPUT_FILE $all_data[$k][4] . "\t";
-		    print OUTPUT_FILE $all_data[$k][10] . "\t";
-		    print OUTPUT_FILE $all_data[$k][11] . "\n";
+		    if (defined($all_data[$k][10])) {
+                print OUTPUT_FILE $all_data[$k][10] . "\t";
+            }
+            if (defined($all_data[$k][11])) {
+                print OUTPUT_FILE $all_data[$k][11] . "\t";
+            }
+            print OUTPUT_FILE "\n";
 
 		    $prev = $all_data[$k][5];
 		    $remainder = $endTime - $all_data[$k][5];
