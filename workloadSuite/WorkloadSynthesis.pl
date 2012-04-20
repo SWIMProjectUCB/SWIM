@@ -41,12 +41,14 @@ while (<INPUT_FILE>) {
     $all_data[$dataSize][2] = $fields[2];   # map_input_bytes
     $all_data[$dataSize][3] = $fields[3];   # shuffle_bytes
     $all_data[$dataSize][4] = $fields[4];   # reduce_output_bytes
-    $all_data[$dataSize][5] = str2time($fields[5]);   # submit_time_seconds
-    $all_data[$dataSize][6] = (str2time($fields[7]) - str2time($fields[6]));   # duration_seconds
-    $all_data[$dataSize][7] = $fields[8];   # map_time_task_seconds
-    $all_data[$dataSize][8] = $fields[9];   # red_time_task_seconds
-    $all_data[$dataSize][9] = $fields[10];  # total_time_task_seconds
-
+    $all_data[$dataSize][5] = $fields[5];   # submit_time_seconds
+    $all_data[$dataSize][6] = $fields[6];   # duration_seconds
+    $all_data[$dataSize][7] = $fields[7];   # map_time_task_seconds
+    $all_data[$dataSize][8] = $fields[8];   # red_time_task_seconds
+    $all_data[$dataSize][9] = $fields[9];   # total_time_task_seconds
+    $all_data[$dataSize][10] = $fields[12]; # input path
+    $all_data[$dataSize][11] = $fields[13]; # output path
+    
     $dataSize++;
 
 }
@@ -69,6 +71,9 @@ sub sample_and_print {
 
 	my $jobNumber = 0;
 	my $timeSoFar = 0;
+
+	my %inputHash = ();
+	my %outputHash = ();
 
 	# truncate previously existing file and open new one for append
 
@@ -117,7 +122,39 @@ sub sample_and_print {
 		    print OUTPUT_FILE ($all_data[$k][5] - floor($prev)) . "\t"; # inter-job time gap seconds
 		    print OUTPUT_FILE $all_data[$k][2] . "\t";
 		    print OUTPUT_FILE $all_data[$k][3] . "\t";
-		    print OUTPUT_FILE $all_data[$k][4] . "\n";
+		    print OUTPUT_FILE $all_data[$k][4] . "\t";
+		    
+                    # print anonymized input path if info available, else print TAB
+		    if (defined($all_data[$k][10])) {
+			my $inputPath = $all_data[$k][10];
+			if (defined($inputHash{$inputPath})) {
+			    $inputPath = $inputHash{$inputPath};
+			} else {
+			    $inputHash{$inputPath} = scalar(keys( %inputHash ));
+			    $inputPath =  scalar(keys( %inputHash ));
+			}
+			$inputPath = "inputPath" . $inputPath;
+			print OUTPUT_FILE $inputPath . "\t";
+		    } else {
+			print OUTPUT_FILE "\t";
+		    }
+		    
+		    # print anonymized output path if info available, else print TAB
+		    if (defined($all_data[$k][11])) {
+			my $outputPath = $all_data[$k][11];
+                        if (defined($outputHash{$outputPath})) {
+                            $outputPath = $outputHash{$outputPath};
+                        } else {
+                            $outputHash{$outputPath} = scalar(keys( %outputHash ));
+                            $outputPath =  scalar(keys( %outputHash ));
+                        }
+                        $outputPath = "outputPath" . $outputPath;
+			print OUTPUT_FILE $outputPath . "\t";
+		    } else {
+                        print OUTPUT_FILE "\t";
+                    }
+		    
+		    print OUTPUT_FILE "\n";
 
 		    $prev = $all_data[$k][5];
 		    $remainder = $endTime - $all_data[$k][5];
