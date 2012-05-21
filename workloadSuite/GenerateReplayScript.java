@@ -1,6 +1,8 @@
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.FileWriter;
+import java.io.File;
+import java.io.InputStreamReader;
 import java.util.HashMap;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -312,6 +314,25 @@ public class GenerateReplayScript {
                 System.err.println("All is good.");
 		System.err.println();
 	    }
+
+		// make scriptDirPath directory if it doesn't exist
+		
+		File d = new File(scriptDirPath);
+		if (d.exists()) {
+			if (d.isDirectory()) {
+				System.err.println("Warning! About to overwrite existing scripts in: " + scriptDirPath);
+				System.err.print("Ok to continue? [y/n] ");
+				BufferedReader in = new BufferedReader(new InputStreamReader(System.in));
+				String s = in.readLine();
+				if (s == null || s.length() < 1 || s.toLowerCase().charAt(0) != 'y') {
+					throw new Exception("Declined overwrite of existing directory");
+				}
+			} else {
+				throw new Exception(scriptDirPath + " is a file.");
+			}
+		} else {
+			d.mkdirs();
+		}
 
 	    // print shell scripts
 
