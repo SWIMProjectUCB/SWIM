@@ -264,8 +264,8 @@ public class WorkGen extends Configured implements Tool {
 
     System.out.println("Max number of map tasks " + cluster.getMaxMapTasks());
     System.out.println("Max number of red tasks " + cluster.getMaxReduceTasks());
-    System.out.println("shuffleInputRatio  = " + jobConf.getDouble("workGen.ratios.shuffleInputRatio", 1.0d));
-    System.out.println("outputShuffleRatio = " + jobConf.getDouble("workGen.ratios.outputShuffleRatio", 1.0d));
+    System.out.println("shuffleInputRatio  = " + jobConf.getFloat("workGen.ratios.shuffleInputRatio", 1.0f));
+    System.out.println("outputShuffleRatio = " + jobConf.getFloat("workGen.ratios.outputShuffleRatio", 1.0f));
 
     System.out.println("Running on " +
         cluster.getTaskTrackers() + " nodes with " + 
