@@ -232,6 +232,116 @@ public class GenerateReplayScript {
 
     }
 
+	/*
+	 *
+	 * Computes the size of a SequenceFile with the given number
+	 * of records. We assume the following 96 byte header:
+	 *
+			4 bytes (magic header prefix)
+			... key class name: 35 bytes for "org.apache.hadoop.io.BytesWritable" (34 characters + one-byte length)
+			... value class name: 35 bytes for "org.apache.hadoop.io.BytesWritable"
+			1 byte boolean (is each record value compressed?)
+			1 byte boolean (is the file block compressed?)
+			bytes for metadata:   in our case, there is no metadata, and we get 4 bytes of zeros
+			16 bytes of sync
+	 *
+	 * The SequenceFile writer places a periodic marker after writing a
+	 * minimum of 2000 bytes; the marker also falls at a record boundary.
+	 * Therefore, unless the serialized record size is a factor of 2000, more
+	 * than 2000 bytes will be written between markers. In the code below, we
+	 * refer to this distance as the "markerSpacing".
+	 *
+	 * The SequenceFile writer can be found in:
+	 * hadoop-common-project/hadoop-common/src/main/java/org/apache/hadoop/io/SequenceFile.java
+	 *
+	 * There are informative constants at the top of the SequenceFile class,
+	 * and the heart of the writer is the append() method of the Writer class.
+	 *
+	 */
+
+	static final int SeqFileHeaderSize = 96;
+	static final int SeqFileRecordSizeUsable = 100; // max_key + max_value
+	static final int SeqFileRecordSizeSerialized = 116; // usable + 4 ints
+	static final int SeqFileMarkerSize = 20;
+	static final double SeqFileMarkerMinSpacing = 2000.0;
+
+	private static int seqFileSize(int numRecords) {
+		int totalSize = SeqFileHeaderSize;
+
+		int recordTotal = numRecords * SeqFileRecordSizeSerialized;
+		totalSize += recordTotal;
+
+		int numRecordsBetweenMarkers = (int) Math.ceil(SeqFileMarkerMinSpacing / (SeqFileRecordSizeSerialized * 1.0));
+		int markerSpacing =  numRecordsBetweenMarkers * SeqFileRecordSizeSerialized;
+		int numMarkers = (int) Math.floor((totalSize * 1.0) / (markerSpacing * 1.0));
+
+		totalSize += numMarkers * SeqFileMarkerSize;
+
+		return totalSize;
+	}
+
+	/*
+	 *
+	 * Computes the amount of data a SequenceFile would hold in
+	 * an HDFS block of the given size. First, we estimate the number
+	 * of records which will fit by inverting seqFileSize(), then we
+	 * decrease until we fit within the block.
+	 *
+	 * To compute the inverse, we start with a simplified form of the equation
+     * computed by seqFileSize(), using X for the number of records:
+	 *
+	 * totalSize =
+	 *   header + X * serialized
+	 *          + markerSize * (header + X * serialized) / markerSpacing
+	 * 
+	 * using some algebra:
+	 *
+	 * (totalSize - header) * markerSpacing
+	 *
+	 *      = X * serialized * markerSpacing + markerSize * (header + X * serialized)
+	 *
+	 *
+	 * (totalSize - header) * markerSpacing - markerSize * header
+	 *
+	 *      = X * serialized * markerSpacing + markerSize * X * serialized
+	 *
+	 *      = (markerSpacing + markerSize) * X * serialized
+	 *
+	 * We now have a Right-Hand Side which looks easy to deal with!
+	 *
+	 * Focusing on the Left-Hand Side, we'd like to avoid multiplying
+	 * (totalSize - header) * markerSpacing as it may be a very large number.
+	 * We re-write as follows:
+	 *
+	 * (totalSize - header) * markerSpacing - markerSize * header =
+	 *      (totalSize - header - markerSize * header / markerSpacing) * markerSpacing
+	 *
+	 */
+
+	public static int maxSeqFile(int blockSize) {
+
+		// First, compute some values we will need. Same as in seqFileSize()
+		int numRecordsBetweenMarkers = (int) Math.ceil(SeqFileMarkerMinSpacing / (SeqFileRecordSizeSerialized * 1.0));
+		double markerSpacing = numRecordsBetweenMarkers * SeqFileRecordSizeSerialized * 1.0;
+
+		// Calculate the Left-Hand Side we wrote in the comment above
+		double est = blockSize - SeqFileHeaderSize - (SeqFileMarkerSize * SeqFileHeaderSize * 1.0) / markerSpacing;
+		est *= markerSpacing;
+
+		// Now, divide the constants from the Right-Hand Side we found above
+		est /= (markerSpacing + SeqFileMarkerSize * 1.0);
+		est /= (SeqFileRecordSizeSerialized * 1.0);
+
+		// Can't have a fractional number of records!
+		int numRecords = (int) Math.ceil(est);
+
+		// Check if we over-estimated
+		while (seqFileSize(numRecords) > blockSize) {
+			numRecords--;
+		}
+
+		return (numRecords * SeqFileRecordSizeUsable);
+	}
 
     /*
      *
@@ -251,7 +361,7 @@ public class GenerateReplayScript {
 	    System.out.println("  [path to file with workload info]");
 	    System.out.println("  [number of machines in the original production cluster]");
 	    System.out.println("  [number of machines in the cluster on which the workload will be run]");
-	    System.out.println("  [size of each input partition in bytes]");
+	    System.out.println("  [HDFS block size]");
 	    System.out.println("  [number of input partitions]");
 	    System.out.println("  [output directory for the scripts]");
 	    System.out.println("  [HDFS directory for the input data]");
@@ -274,7 +384,7 @@ public class GenerateReplayScript {
 
 	    int clusterSizeRaw      = Integer.parseInt(args[1]); 
 	    int clusterSizeWorkload = Integer.parseInt(args[2]); 
-	    int inputPartitionSize  = Integer.parseInt(args[3]); 
+	    int hdfsBlockSize       = Integer.parseInt(args[3]);
 	    int inputPartitionCount = Integer.parseInt(args[4]);
 	    String scriptDirPath    = args[5];
 	    String hdfsInputDir     = args[6];
@@ -292,16 +402,19 @@ public class GenerateReplayScript {
 	    // check if maxInput fits within input data size to be generated
 
 	    long maxInputNeeded = maxInput * clusterSizeWorkload / clusterSizeRaw;
-	    
-	    if (maxInputNeeded > 
-		(((long) inputPartitionSize) * ((long) inputPartitionCount))) {
+
+	    int inputPartitionSize = maxSeqFile(hdfsBlockSize);
+	    long totalInput = ((long) inputPartitionSize) * ((long) inputPartitionCount);
+
+	    if (maxInputNeeded > totalInput) {
 
 		System.err.println();
 		System.err.println("ERROR!");
 		System.err.println("Not enough partitions for max needed input size of " + maxInputNeeded + " bytes.");
+		System.err.println("HDFS block size is " + hdfsBlockSize + " bytes.");
 		System.err.println("Input partition size is " + inputPartitionSize + " bytes.");
 		System.err.println("Number of partitions is " + inputPartitionCount + ".");
-		System.err.println("Total actual input data size is " + (((long) inputPartitionSize) * ((long) inputPartitionCount)) + " bytes < " + maxInputNeeded + " bytes.");
+		System.err.println("Total actual input data size is " + totalInput + " bytes < " + maxInputNeeded + " bytes.");
 		System.err.println("Need to generate a larger input data set.");
 		System.err.println();
 
@@ -310,7 +423,7 @@ public class GenerateReplayScript {
 
 		System.err.println();
 		System.err.println("Max needed input size " + maxInputNeeded + " bytes.");
-		System.err.println("Actual input size is " + (((long) inputPartitionSize) * ((long) inputPartitionCount)) + " bytes >= " + maxInputNeeded + " bytes.");
+		System.err.println("Actual input size is " + totalInput + " bytes >= " + maxInputNeeded + " bytes.");
                 System.err.println("All is good.");
 		System.err.println();
 	    }
@@ -341,7 +454,9 @@ public class GenerateReplayScript {
 			totalDataPerReduce, workloadOutputDir, hadoopCommand, pathToWorkGenJar, pathToWorkGenConf);
 
 
-
+		System.out.println("Parameter values for randomwriter_conf.xsl:");
+		System.out.println("test.randomwrite.total_bytes: " + totalInput);
+		System.out.println("test.randomwrite.bytes_per_map: " + inputPartitionSize);
 	}
 
 	
