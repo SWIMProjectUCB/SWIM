@@ -245,6 +245,18 @@ public class GenerateReplayScript {
 			bytes for metadata:   in our case, there is no metadata, and we get 4 bytes of zeros
 			16 bytes of sync
 	 *
+	 * The SequenceFile writer places a periodic marker after writing a
+	 * minimum of 2000 bytes; the marker also falls at a record boundary.
+	 * Therefore, unless the serialized record size is a factor of 2000, more
+	 * than 2000 bytes will be written between markers. In the code below, we
+	 * refer to this distance as the "markerSpacing".
+	 *
+	 * The SequenceFile writer can be found in:
+	 * hadoop-common-project/hadoop-common/src/main/java/org/apache/hadoop/io/SequenceFile.java
+	 *
+	 * There are informative constants at the top of the SequenceFile class,
+	 * and the heart of the writer is the append() method of the Writer class.
+	 *
 	 */
 
 	static final int SeqFileHeaderSize = 96;
@@ -275,17 +287,52 @@ public class GenerateReplayScript {
 	 * of records which will fit by inverting seqFileSize(), then we
 	 * decrease until we fit within the block.
 	 *
+	 * To compute the inverse, we start with a simplified form of the equation
+     * computed by seqFileSize(), using X for the number of records:
+	 *
+	 * totalSize =
+	 *   header + X * serialized
+	 *          + markerSize * (header + X * serialized) / markerSpacing
+	 * 
+	 * using some algebra:
+	 *
+	 * (totalSize - header) * markerSpacing
+	 *
+	 *      = X * serialized * markerSpacing + markerSize * (header + X * serialized)
+	 *
+	 *
+	 * (totalSize - header) * markerSpacing - markerSize * header
+	 *
+	 *      = X * serialized * markerSpacing + markerSize * X * serialized
+	 *
+	 *      = (markerSpacing + markerSize) * X * serialized
+	 *
+	 * We now have a Right-Hand Side which looks easy to deal with!
+	 *
+	 * Focusing on the Left-Hand Side, we'd like to avoid multiplying
+	 * (totalSize - header) * markerSpacing as it may be a very large number.
+	 * We re-write as follows:
+	 *
+	 * (totalSize - header) * markerSpacing - markerSize * header =
+	 *      (totalSize - header - markerSize * header / markerSpacing) * markerSpacing
+	 *
 	 */
 
 	public static int maxSeqFile(int blockSize) {
 
+		// First, compute some values we will need. Same as in seqFileSize()
 		int numRecordsBetweenMarkers = (int) Math.ceil(SeqFileMarkerMinSpacing / (SeqFileRecordSizeSerialized * 1.0));
 		double markerSpacing = numRecordsBetweenMarkers * SeqFileRecordSizeSerialized * 1.0;
 
-		double est = blockSize - SeqFileHeaderSize - (SeqFileHeaderSize * SeqFileMarkerSize * 1.0) / markerSpacing;
-		est *= (markerSpacing / (markerSpacing + SeqFileMarkerSize * 1.0));
+		// Calculate the Left-Hand Side we wrote in the comment above
+		double est = blockSize - SeqFileHeaderSize - (SeqFileMarkerSize * SeqFileHeaderSize * 1.0) / markerSpacing;
+		est *= markerSpacing;
+
+		// Now, divide the constants from the Right-Hand Side we found above
+		est /= (markerSpacing + SeqFileMarkerSize * 1.0);
 		est /= (SeqFileRecordSizeSerialized * 1.0);
 
+		// Can't have a fractional number of records!
 		int numRecords = (int) Math.ceil(est);
 
 		// Check if we over-estimated
