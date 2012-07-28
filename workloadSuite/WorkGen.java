@@ -90,11 +90,11 @@ public class WorkGen extends Configured implements Tool {
 		int keyLength = minKeySize + (keySizeRange != 0 ? random.nextInt(keySizeRange) : 0);
 		randomKey = new BytesWritable();
 		randomKey.setSize(keyLength);
-		randomizeBytes(randomKey.get(), 0, randomKey.getSize());
+		randomizeBytes(randomKey.getBytes(), 0, randomKey.getLength());
 		int valueLength = minValueSize + (valueSizeRange != 0 ? random.nextInt(valueSizeRange) : 0);
 		randomValue = new BytesWritable();
 		randomValue.setSize(valueLength);
-		randomizeBytes(randomValue.get(), 0, randomValue.getSize());
+		randomizeBytes(randomValue.getBytes(), 0, randomValue.getLength());
 		if (shuffleInputRatioTemp >= 1.0d || (random.nextDouble() < shuffleInputRatioTemp)) {
 		    output.collect(randomKey, randomValue);
 		    reporter.incrCounter(Counters.MAP_BYTES_WRITTEN, keyLength + valueLength);
@@ -152,11 +152,11 @@ public class WorkGen extends Configured implements Tool {
 		    int keyLength = minKeySize + (keySizeRange != 0 ? random.nextInt(keySizeRange) : 0);
 		    randomKey = new BytesWritable();
 		    randomKey.setSize(keyLength);
-		    randomizeBytes(randomKey.get(), 0, randomKey.getSize());
+		    randomizeBytes(randomKey.getBytes(), 0, randomKey.getLength());
 		    int valueLength = minValueSize + (valueSizeRange != 0 ? random.nextInt(valueSizeRange) : 0);
 		    randomValue = new BytesWritable();
 		    randomValue.setSize(valueLength);
-		    randomizeBytes(randomValue.get(), 0, randomValue.getSize());
+		    randomizeBytes(randomValue.getBytes(), 0, randomValue.getLength());
 		    if (outputShuffleRatioTemp >= 1.0d || (random.nextDouble() < outputShuffleRatioTemp)) {
 			output.collect(randomKey, randomValue);
 			reporter.incrCounter(Counters.RED_BYTES_WRITTEN, keyLength + valueLength);
