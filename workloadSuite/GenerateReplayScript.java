@@ -122,8 +122,8 @@ public class GenerateReplayScript {
 		output  = output  * clusterSizeWorkload / clusterSizeRaw; 
 
 		if (input > maxInput) maxInput = input;
+		if (input < maxSeqFile(67108864)) input = maxSeqFile(67108864); // 64 MB minimum size
 
-		if (input   < 67108864) input   = 67108864;
 		if (shuffle < 1024    ) shuffle = 1024    ;
 		if (output  < 1024    ) output  = 1024    ;
 
